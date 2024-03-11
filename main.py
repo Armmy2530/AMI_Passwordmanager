@@ -9,20 +9,29 @@ import json
 
 class password_manager_system:
     __auth = False
+    data_folder_path = os.path.join(os.path.dirname(__file__),"data")
+    key_path = os.path.join(data_folder_path,".key")
+    encpt_data_path = os.path.join(data_folder_path,".encrypt_data")
     def is_newuser(self):
-        return not(os.path.exists(data_folder))
+        return not(os.path.exists(self.data_folder_path))
     
-    def get_master_password(self):
-        master_password = getpass("Enter your master password: ")
-        return master_password
+    def change_masterpassword(self,__new_password):
+        new_encpt_key = self.hash_data(__new_password,salt=__new_password)
+        
+        fernet = Fernet(new_encpt_key) 
+        Key_File = open(self.key_path , "wb")
+        Key_File.write(fernet.encrypt(self.__key.encode()))
+        Key_File.close()
+        self.set_masterpassword(__new_password)
+        self.load_key()
     
     def setup_newuser(self):
-        os.makedirs(data_folder)       
-        self.__master_password = self.get_master_password()
+        os.makedirs(self.data_folder_path)       
+        self.__master_password = getpass("Enter your master password: ")
         key = self.hash_data(self.__master_password,salt=self.__master_password)
 
         fernet = Fernet(key) 
-        Key_File = open("E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data/.key" , "wb")
+        Key_File = open(self.key_path , "wb")
         Key_File.write(fernet.encrypt(key))
         Key_File.close()
 
@@ -51,20 +60,17 @@ class password_manager_system:
     def login_system(self,__master_password):
         loging_pass_hashed = self.hash_data(__master_password,salt=__master_password)
 
-        Key_File = open("E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data/.key" , "rb")
+        Key_File = open(self.key_path , "rb")
         encpt_Key = Key_File.read()
         Key_File.close()
 
         try:
             login_fernet = Fernet(loging_pass_hashed) 
             decpt_key = login_fernet.decrypt(encpt_Key)
-            if(loging_pass_hashed == decpt_key):
-                self.__auth = True
-                self.set_masterpassword(__master_password)
-                pm_screen.clear()
-            else:
-                self.__auth = False
-        except:
+            self.__auth = True
+            self.set_masterpassword(__master_password)
+            pm_screen.clear()
+        except Exception as e:
             pm_screen.clear()
             print("Incorect password")
             
@@ -73,7 +79,7 @@ class password_manager_system:
         return self.__auth
 
     def load_key(self):
-        Key_File = open("E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data/.key" , "rb")
+        Key_File = open(self.key_path , "rb")
         encpt_key = Key_File.read()
         Key_File.close()
 
@@ -82,14 +88,15 @@ class password_manager_system:
         decpt_fernet = Fernet(fernet_decpt_key)
         decpt_key = decpt_fernet.decrypt(encpt_key).decode()
         self.fernet = Fernet(decpt_key) 
+        self.__key = decpt_key
 
     def write_encrypt_data(self,_src):
-        encrypt_file = open("E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data/.encrypt_data" , "wb") 
+        encrypt_file = open(self.encpt_data_path , "wb") 
         encrypt_file.write(self.fernet.encrypt(_src.encode()))
         encrypt_file.close()
 
     def decrypt_data(self):
-        encrypt_file = open("E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data/.encrypt_data" , "rb") 
+        encrypt_file = open(self.encpt_data_path , "rb") 
         encrypt_data = encrypt_file.read()
         encrypt_file.close()
         return self.fernet.decrypt(encrypt_data).decode()
@@ -122,7 +129,7 @@ class password_manager_system:
         if(title in self.__data):
             pm_screen.titleexist()
         else:
-            tmp_data = {title : {"username" : username,"password": password }}
+            tmp_data = {title : {'username' : username,'password': password }}
             self.__data.update(tmp_data)
             self.save_data()
     
@@ -149,11 +156,11 @@ class password_manager_system:
             case "2":
                 print("Enter new username: ",end="")
                 user_input = input()
-                self.__data[_title]["username"] = user_input
+                self.__data[_title]['username'] = user_input
             case "3":
                 print("Enter new password: ",end="")
                 user_input = input()
-                self.__data[_title]["password"] = user_input
+                self.__data[_title]['password'] = user_input
             case _: 
                 pm_screen.error_print()
         self.save_data()
@@ -164,7 +171,10 @@ class passsword_manager_print:
     def titleexist(self):
         print("Title already exists")
     def clear(self):
-        os.system("cls")
+        if os.name == 'nt':
+            os.system('cls')
+        else:
+            os.system('clear')
     def waituntilpress(self):
         print("\nPress any key to continue....")
         input()
@@ -186,7 +196,8 @@ class passsword_manager_print:
             "2. Add    Username and Password",
             "3. Edit   Username and Password",
             "4. Delete Username and Password",
-            "5. Exit Program"
+            "5. Change Master Password",
+            "6. Exit Program"
         ]
         welcome_text = "Welcome to my password manager"
         menu_options_text = ""
@@ -211,8 +222,8 @@ class passsword_manager_print:
     def edit_menu(self,sel_title,data):
         print(self.separator)
         print(f"1) Title: {sel_title}")
-        print(f"2) Username: {data["username"]}")
-        print(f"3) Password: {data["password"]}")
+        print(f"2) Username: {data['username']}")
+        print(f"3) Password: {data['password']}")
         print(self.separator)
         print(f"Please enter 1-3 to select: " , end="")
     
@@ -245,7 +256,7 @@ def main():
                 pm_system.load_key()
                 pm_system.load_data()
                 pm_screen.main_menu()
-                user_input = input("Enter 1-5 to select: ")
+                user_input = input("Enter 1-6 to select: ")
                 pm_screen.clear()
                 match user_input:
                     case "1":
@@ -256,8 +267,8 @@ def main():
                         if (data == "404"):
                             print("not found")
                         else:
-                            print(f"Username: {data["username"]}")
-                            print(f"Password: {data["password"]}")
+                            print(f"Username: {data['username']}")
+                            print(f"Password: {data['password']}")
                         pm_screen.waituntilpress()
                     case "2":
                         title = pm_system.list_titles()
@@ -298,6 +309,8 @@ def main():
                                 print("Delete cancled")
                         pm_screen.waituntilpress()
                     case "5":
+                        pm_system.change_masterpassword(getpass("Enter new master password: "))
+                    case "6":
                         running = False
                     case _  : 
                         pm_screen.error_print()
@@ -308,7 +321,6 @@ def main():
         time.sleep(1)
         pm_screen.clear()
 
-data_folder = "E:/Documents/Project/AMI_python_sec2/final project/PasswordManager/data"
 if __name__ == "__main__":
     pm_screen = passsword_manager_print()
     pm_system = password_manager_system()
