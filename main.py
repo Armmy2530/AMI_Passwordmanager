@@ -36,7 +36,7 @@ class password_manager_system:
         Key_File.close()
 
         self.load_key()
-        self.write_encrypt_data("{}")
+        self.write_encrypt_data('{"demo": {"username": "test1", "password": "xxxxxxxxxx"}}')
 
     def hash_data(self,master_password, salt = "salt"):
         # Convert the password and salt to bytes
@@ -66,7 +66,7 @@ class password_manager_system:
 
         try:
             login_fernet = Fernet(loging_pass_hashed) 
-            decpt_key = login_fernet.decrypt(encpt_Key)
+            login_fernet.decrypt(encpt_Key)
             self.__auth = True
             self.set_masterpassword(__master_password)
             pm_screen.clear()
@@ -105,6 +105,10 @@ class password_manager_system:
         src = self.decrypt_data()
         self.__data = json.loads(src)
         return json.loads(src)
+    
+    def print_data(self):
+        src = self.decrypt_data()
+        print(src) 
     
     def filter_data(self,filter_word):
         self.load_data()
@@ -214,13 +218,14 @@ class passsword_manager_print:
         print(text, end="")
 
     def get_menu(self):
+        print("*** Get Account username and password ***")
         self.search_print()
         
     def add_menu(self):
-        pass
+        print("*** Add Account ***")
 
     def edit_menu(self,sel_title,data):
-        print(self.separator)
+        print("*** Edit Account ***")
         print(f"1) Title: {sel_title}")
         print(f"2) Username: {data['username']}")
         print(f"3) Password: {data['password']}")
@@ -228,17 +233,21 @@ class passsword_manager_print:
         print(f"Please enter 1-3 to select: " , end="")
     
     def delete_menu(self):
+        print("*** Delete Account ***")
         self.search_print()
 
     def title_print(self,_src):
         padding = 20
         header = "*** Available title ***"
         title_text = ""
-        for index,value in enumerate(_src, start=1):
-            if(index % 4 == 0):
-                title_text += f"- {value:<{padding}} \n"
-            else:
-                title_text += f"- {value:<{padding}}"
+        if(len(_src) == 0):
+            title_text = "  not found title, Please make you first title"
+        else:
+            for index,value in enumerate(_src, start=1):
+                if(index % 4 == 0):
+                    title_text += f"- {value:<{padding}} \n"
+                else:
+                    title_text += f"- {value:<{padding}}"
         text = f"{self.separator}{header}{self.separator}{title_text}{self.separator}"
         print(text)
 
@@ -273,6 +282,7 @@ def main():
                     case "2":
                         title = pm_system.list_titles()
                         pm_screen.title_print(title)
+                        pm_screen.add_menu()
                         title = input("Enter new title: ")
                         username = input("Enter new username: ")
                         password = input("Enter new pasword: ")
@@ -300,7 +310,7 @@ def main():
                         if (data == "404"):
                             print("not found")
                         else:
-                            print(f"Are you sure to delete this account(y/n default: no): ",end="")
+                            print(f'Are you sure to delete this account(type "yes" or "no" default: no): ',end="")
                             ans = input().lower()
                             if(ans in ["yes","y"]):
                                 print("Deleting Account")
@@ -314,14 +324,20 @@ def main():
                         running = False
                     case _  : 
                         pm_screen.error_print()
-                        input("Please any key to continue")
+                        pm_screen.waituntilpress()
                 pm_screen.clear()
         
         print("Exiting Program......",end="")
         time.sleep(1)
         pm_screen.clear()
 
+def test_json():
+    pm_system.login_system("12345")
+    pm_system.load_key()
+    pm_system.print_data()
+
 if __name__ == "__main__":
     pm_screen = passsword_manager_print()
     pm_system = password_manager_system()
     main() 
+    # test_json()
